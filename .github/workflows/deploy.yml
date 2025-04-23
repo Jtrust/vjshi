@@ -1,28 +1,38 @@
-name: GitHub Pages Deploy
+# .github/workflows/pnpm-build.yml
+name: PNPM Build & Deploy
 
 on:
   push:
-    branches: [main]  # 触发分支
+    branches: [main]
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # 1. 安装指定版本 pnpm
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.0  # 显式指定版本
+          run_install: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      # 2. 设置 Node.js 环境
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'  # 适配 pnpm 10+ 的新缓存机制
 
+      # 3. 依赖安装核心步骤
       - name: Install Dependencies
-        run: npm ci
+        run: |
+          pnpm install --frozen-lockfile  # 严格模式
+          pnpm dlx @pnpm/lockfile-type@2.0.0 convert  # 锁文件格式优化
 
+      # 4. 构建与部署
       - name: Build Project
-        run: npm run build
+        run: pnpm run build
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./out  # Next.js默认输出目录
+          publish_dir: ./out
